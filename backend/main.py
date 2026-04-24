@@ -5,20 +5,18 @@ from datetime import datetime
 app = FastAPI()
 
 BASE = os.path.dirname(__file__)
-STATE = os.path.join(BASE, "state.json")
-QUEUE = os.path.join(BASE, "queue.json")
+STATE = os.path.join(BASE, "backend/state.json")
+QUEUE = os.path.join(BASE, "backend/queue.json")
 
 # ---------------------------
 # SAFE LOAD / SAVE
 # ---------------------------
-def load(path, default):
-    if not os.path.exists(path):
-        return default
-    with open(path, "r") as f:
+def load():
+    with open(STATE, "r") as f:
         return json.load(f)
 
-def save(path, data):
-    with open(path, "w") as f:
+def save(data):
+    with open(STATE, "w") as f:
         json.dump(data, f, indent=4)
 
 # ---------------------------
