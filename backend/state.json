@@ -1,5 +1,5 @@
 {
   "engine_running": false,
-  "gpu_mode": "ovh",
-  "last_run": ""
+  "llm_mode": "groq", 
+  "gpu_mode": "colab"
 }
