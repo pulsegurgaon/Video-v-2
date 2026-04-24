@@ -1,59 +1,31 @@
-import time
-import os
+import json
 
-OUTPUT_DIR = "outputs"
+STATE = "state.json"
 
-# make sure folder exists
-if not os.path.exists(OUTPUT_DIR):
-    os.makedirs(OUTPUT_DIR)
+def get_mode():
+    return json.load(open(STATE))["gpu_mode"]
 
+def generate_video(prompt):
+    mode = get_mode()
 
-def generate_video(prompt, output_file):
-    """
-    This function will:
-    1. Receive prompt from backend
-    2. Send to video AI (later)
-    3. Return final video file path
-    """
+    if mode == "ovh":
+        return generate_local(prompt)
 
-    print("\n🎬 [VIDEO AI] Generating video...")
-    print("🧠 Prompt received:\n")
-    print(prompt)
-
-    # ⚠️ CURRENT MODE: FAKE RENDER (SAFE TEST MODE)
-    # This avoids wasting GPU time while testing
-
-    fake_path = os.path.join(OUTPUT_DIR, output_file)
-
-    with open(fake_path, "w") as f:
-        f.write("FAKE VIDEO FILE\n")
-        f.write(prompt)
-
-    time.sleep(2)
-
-    print(f"\n✅ [VIDEO AI] Video created: {fake_path}")
-
-    return fake_path
+    elif mode == "colab":
+        return trigger_colab(prompt)
 
 
-# 🚀 FUTURE (REAL VIDEO AI HOOK)
-def generate_video_real(prompt):
-    """
-    Later we replace this with:
-    - ComfyUI API
-    - AnimateDiff
-    - SkyReels
-    """
+def generate_local(prompt):
+    print("🔥 Running on OVH GPU")
+    # TODO: connect your actual video AI here
+    return "video_generated_locally.mp4"
 
-    # Example structure (not active yet)
-    """
-    import requests
 
-    response = requests.post("http://localhost:8188/prompt", json={
-        "prompt": prompt
-    })
+def trigger_colab(prompt):
+    print("☁️ Sending job to Colab")
 
-    return response.json()["video"]
-    """
+    # TODO:
+    # - send prompt to Colab notebook (API / webhook / shared file)
+    # - wait or return link
 
-    pass
+    return "colab_video_link.mp4"
