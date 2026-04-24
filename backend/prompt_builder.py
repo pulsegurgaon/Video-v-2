@@ -1,4 +1,16 @@
 from ollama_client import ask_ollama
+from groq_client import ask_groq
+from storage_manager import load_state
+
+def build_prompt(pillar, history):
+
+    state = load_state()
+    mode = state.get("llm_mode", "groq")
+
+    if mode == "ollama":
+        return ask_ollama(system, user)
+    else:
+        return ask_groq(system, user)
 
 def build_prompt(pillar, history):
 
