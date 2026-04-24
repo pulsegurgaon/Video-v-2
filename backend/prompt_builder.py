@@ -1,19 +1,14 @@
-from ollama_client import ask_ollama
 from groq_client import ask_groq
+from ollama_client import ask_ollama
 from storage_manager import load_state
 
 def build_prompt(pillar, history):
 
+    # 🧠 Load system state (to know which AI to use)
     state = load_state()
-    mode = state.get("llm_mode", "groq")
+    mode = state.get("llm_mode", "groq")  # default = groq
 
-    if mode == "ollama":
-        return ask_ollama(system, user)
-    else:
-        return ask_groq(system, user)
-
-def build_prompt(pillar, history):
-
+    # 🎯 Your pillar-based idea bank
     idea_bank = {
         "dog": [
             "hungry puppy begging food at street stall",
@@ -53,6 +48,7 @@ def build_prompt(pillar, history):
         ]
     }
 
+    # 🎬 SYSTEM RULES (very important for quality)
     system = """
 You are a viral short video director.
 
@@ -61,6 +57,7 @@ Generate a HIGH QUALITY AI video prompt.
 Rules:
 - 9:16 vertical
 - cinematic
+- ultra realistic
 - 4K
 - include camera movement
 - include lighting
@@ -68,16 +65,23 @@ Rules:
 - no repetition
 """
 
+    # 🧠 USER INPUT TO AI
     user = f"""
 Category: {pillar}
 
 Examples of user preference:
-{idea_bank[pillar]}
+{idea_bank.get(pillar, [])}
 
 Avoid repeating:
 {history}
 
-Create a NEW similar but unique idea and expand it into a cinematic video prompt.
+Create a NEW unique idea and expand it into a cinematic AI video prompt.
 """
 
-    return ask_ollama(system, user)
+    # 🔀 AI SWITCH (THIS IS THE MAGIC)
+    if mode == "ollama":
+        print("🖥️ Using OLLAMA")
+        return ask_ollama(system, user)
+    else:
+        print("⚡ Using GROQ")
+        return ask_groq(system, user)
