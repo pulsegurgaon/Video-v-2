@@ -163,3 +163,9 @@ def update_pillars(data: dict):
     save(STATE, state)
 
     return {"status": "updated"}
+@app.post("/set-delay/{seconds}")
+def set_delay(seconds: int):
+    s = load()
+    s["delay"] = seconds
+    save(s)
+    return {"delay": seconds}
