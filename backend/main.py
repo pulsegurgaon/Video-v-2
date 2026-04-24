@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 import json, subprocess, os
 from datetime import datetime
-
-from prompt_builder import build_prompt   # 👈 YOUR FILE
+from prompt_builder import build_prompt
 
 app = FastAPI()
 
@@ -24,17 +23,43 @@ def save(file, data):
         json.dump(data, f, indent=4)
 
 # ---------------------------
-# INIT
+# INIT STATE
 # ---------------------------
 if not os.path.exists(STATE):
     save(STATE, {
         "engine_running": False,
         "gpu_mode": "ovh",
-        "history": []
+        "history": [],
+        "pillar_index": 0,
+        "pillars": [
+            "dog",
+            "satisfying",
+            "survival",
+            "restoration",
+            "whatif",
+            "house"
+        ]
     })
 
 if not os.path.exists(QUEUE):
     save(QUEUE, [])
+
+# ---------------------------
+# ROTATION
+# ---------------------------
+def get_next_pillar():
+    state = load(STATE)
+
+    pillars = state["pillars"]
+    index = state["pillar_index"]
+
+    pillar = pillars[index]
+
+    # rotate
+    state["pillar_index"] = (index + 1) % len(pillars)
+    save(STATE, state)
+
+    return pillar
 
 # ---------------------------
 # ROUTES
@@ -54,7 +79,7 @@ def start():
     s["engine_running"] = True
     save(STATE, s)
 
-    subprocess.Popen(["python3", os.path.join(BASE, "backend/automation.py")])
+    subprocess.Popen(["python3", os.path.join(BASE, "automation.py")])
 
     return {"status": "started"}
 
@@ -71,20 +96,17 @@ def queue():
     return load(QUEUE)
 
 # ---------------------------
-# 🔥 CORE: ADD JOB USING OLLAMA
+# 🔥 AUTO GENERATION (NO INPUT NEEDED)
 # ---------------------------
-@app.post("/add")
-def add_to_queue(data: dict):
-
-    pillar = data.get("type")
-
-    if not pillar:
-        return {"error": "pillar required"}
+@app.post("/generate")
+def generate():
 
     state = load(STATE)
-    history = state.get("history", [])
+    history = state["history"]
 
-    # 🧠 Generate prompt using YOUR prompt_builder
+    pillar = get_next_pillar()
+
+    # 🧠 YOUR OLLAMA SYSTEM
     prompt = build_prompt(pillar, history)
 
     job = {
@@ -94,18 +116,18 @@ def add_to_queue(data: dict):
         "time": str(datetime.now())
     }
 
-    # save queue
     q = load(QUEUE)
     q.append(job)
     save(QUEUE, q)
 
-    # update history (store short version to avoid repetition)
+    # update history
     history.append(prompt[:80])
-    state["history"] = history[-20:]  # keep last 20 only
+    state["history"] = history[-20:]
     save(STATE, state)
 
     return {
-        "status": "generated via ollama 🧠🔥",
+        "status": "generated 🔥",
+        "pillar": pillar,
         "prompt": prompt
     }
 
@@ -123,3 +145,21 @@ def set_mode(mode: str):
     save(STATE, s)
 
     return {"mode": mode}
+
+# ---------------------------
+# EDIT PILLARS (FROM FRONTEND)
+# ---------------------------
+@app.post("/pillars")
+def update_pillars(data: dict):
+    new_pillars = data.get("pillars")
+
+    if not new_pillars or len(new_pillars) == 0:
+        return {"error": "invalid pillars"}
+
+    state = load(STATE)
+    state["pillars"] = new_pillars
+    state["pillar_index"] = 0  # reset rotation
+
+    save(STATE, state)
+
+    return {"status": "updated"}
