@@ -79,3 +79,9 @@ def add_to_queue(item: dict):
     q.append(item)
     save(QUEUE, q)
     return {"status": "added", "queue_size": len(q)}
+@app.post("/mode/{mode}")
+def set_mode(mode: str):
+    s = load()
+    s["gpu_mode"] = mode  # "ovh" or "colab"
+    save(s)
+    return {"mode": mode}
