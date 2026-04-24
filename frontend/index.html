@@ -41,6 +41,10 @@
     .danger {
       background: #ef4444;
     }
+
+    ul {
+      margin-top: 10px;
+    }
   </style>
 </head>
 
@@ -60,7 +64,7 @@
   <button onclick="saveLLM()">💾 Save Brain Mode</button>
 </div>
 
-<!-- 🎬 COLAB URL -->
+<!-- 🌐 COLAB -->
 <div class="card">
   <h3>🌐 Video Server (Colab)</h3>
 
@@ -88,47 +92,84 @@
 
   <button onclick="startEngine()">▶ Start</button>
   <button class="danger" onclick="stopEngine()">⛔ Stop</button>
+
+  <p id="engineStatus"></p>
+</div>
+
+<!-- 📊 STATUS -->
+<div class="card">
+  <h3>📊 Live Status</h3>
+  <pre id="statusBox">Loading...</pre>
+</div>
+
+<!-- 📦 QUEUE -->
+<div class="card">
+  <h3>📦 Generated Videos</h3>
+  <pre id="queueBox">Empty</pre>
 </div>
 
 <script>
 
+const BASE_URL = "http://127.0.0.1:8000"; // change to Render later
+
 // ----------------------
-// LOAD SAVED DATA
+// LOAD ON START
 // ----------------------
 window.onload = () => {
   document.getElementById("colabUrl").value = localStorage.getItem("COLAB_API") || "";
+  document.getElementById("llmMode").value = localStorage.getItem("LLM_MODE") || "groq";
   loadPillars();
+  fetchStatus();
+  fetchQueue();
 };
 
 // ----------------------
-// SAVE LLM MODE
+// SYNC CONFIG
 // ----------------------
-function saveLLM() {
-  const mode = document.getElementById("llmMode").value;
-  localStorage.setItem("LLM_MODE", mode);
-  alert("Saved: " + mode);
+async function syncConfig() {
+  const colab_url = localStorage.getItem("COLAB_API");
+  const llm_mode = localStorage.getItem("LLM_MODE");
+  const pillars = JSON.parse(localStorage.getItem("PILLARS") || "[]");
+
+  await fetch(BASE_URL + "/config", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      colab_url,
+      llm_mode,
+      pillars
+    })
+  });
 }
 
 // ----------------------
-// COLAB URL
+// LLM
 // ----------------------
-function saveColabUrl() {
+async function saveLLM() {
+  const mode = document.getElementById("llmMode").value;
+  localStorage.setItem("LLM_MODE", mode);
+
+  await syncConfig();
+  alert("🧠 Brain set to: " + mode);
+}
+
+// ----------------------
+// COLAB
+// ----------------------
+async function saveColabUrl() {
   const url = document.getElementById("colabUrl").value;
   localStorage.setItem("COLAB_API", url);
-  document.getElementById("colabStatus").innerText = "✅ Saved!";
+
+  await syncConfig();
+  document.getElementById("colabStatus").innerText = "✅ Saved + Synced";
 }
 
 async function testColab() {
-  const url = localStorage.getItem("COLAB_API");
-
-  if (!url) {
-    alert("Enter URL first");
-    return;
-  }
+  const url = document.getElementById("colabUrl").value;
 
   try {
     const res = await fetch(url);
-    const data = await res.json();
+    await res.json();
     document.getElementById("colabStatus").innerText = "✅ Connected";
   } catch {
     document.getElementById("colabStatus").innerText = "❌ Failed";
@@ -150,7 +191,7 @@ function loadPillars() {
   });
 }
 
-function addPillar() {
+async function addPillar() {
   const input = document.getElementById("pillarInput");
   let list = JSON.parse(localStorage.getItem("PILLARS") || "[]");
 
@@ -159,25 +200,68 @@ function addPillar() {
 
   input.value = "";
   loadPillars();
+
+  await syncConfig();
 }
 
-function removePillar(i) {
+async function removePillar(i) {
   let list = JSON.parse(localStorage.getItem("PILLARS") || "[]");
   list.splice(i, 1);
+
   localStorage.setItem("PILLARS", JSON.stringify(list));
   loadPillars();
+
+  await syncConfig();
 }
 
 // ----------------------
-// ENGINE (placeholder for now)
+// ENGINE
 // ----------------------
-function startEngine() {
-  alert("Engine start will connect after backend is ready 🚀");
+async function startEngine() {
+  await fetch(BASE_URL + "/start", {method: "POST"});
+  document.getElementById("engineStatus").innerText = "🚀 Running";
 }
 
-function stopEngine() {
-  alert("Engine stopped 🛑");
+async function stopEngine() {
+  await fetch(BASE_URL + "/stop", {method: "POST"});
+  document.getElementById("engineStatus").innerText = "🛑 Stopped";
 }
+
+// ----------------------
+// STATUS
+// ----------------------
+async function fetchStatus() {
+  try {
+    const res = await fetch(BASE_URL + "/status");
+    const data = await res.json();
+
+    document.getElementById("statusBox").innerText =
+      JSON.stringify(data, null, 2);
+  } catch {
+    document.getElementById("statusBox").innerText = "❌ Backend not connected";
+  }
+}
+
+// ----------------------
+// QUEUE
+// ----------------------
+async function fetchQueue() {
+  try {
+    const res = await fetch(BASE_URL + "/queue");
+    const data = await res.json();
+
+    document.getElementById("queueBox").innerText =
+      JSON.stringify(data, null, 2);
+  } catch {
+    document.getElementById("queueBox").innerText = "❌ No data";
+  }
+}
+
+// 🔁 Auto refresh every 5 sec
+setInterval(() => {
+  fetchStatus();
+  fetchQueue();
+}, 5000);
 
 </script>
 
