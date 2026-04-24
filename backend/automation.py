@@ -18,21 +18,21 @@ def run_engine():
     while True:
         state = load_state()
 
-        # ⛔ STOP if not running
+        # ⛔ Engine OFF
         if not state["engine_running"]:
             time.sleep(2)
             continue
 
         pillars = state["pillars"]
 
-        # 🔁 ROTATION LOGIC
+        # 🔁 ROTATION
         index = state["total_videos"] % len(pillars)
         pillar = pillars[index]
 
         print(f"\n🧠 Current Pillar: {pillar}")
 
         try:
-            # 🧠 BUILD PROMPT FROM OLLAMA
+            # 🧠 AI Prompt
             prompt = build_prompt(pillar, state["history"])
 
         except Exception as e:
@@ -40,11 +40,10 @@ def run_engine():
             time.sleep(3)
             continue
 
-        # 🎬 OUTPUT FILE
         file_name = f"video_{state['total_videos'] + 1}.mp4"
 
         try:
-            # 🎥 RENDER VIDEO
+            # 🎥 Render
             render_video(prompt, file_name)
 
         except Exception as e:
@@ -52,13 +51,13 @@ def run_engine():
             time.sleep(3)
             continue
 
-        # ☁️ SAVE TO STORAGE
+        # ☁️ Upload
         uploaded_name = upload_to_drive(file_name)
 
-        # 🔔 REMIND USER
+        # 🔔 Notify
         remind_upload(uploaded_name)
 
-        # 📦 UPDATE QUEUE
+        # 📦 Queue update
         queue = load_queue()
         queue.append({
             "id": state["total_videos"] + 1,
@@ -68,16 +67,18 @@ def run_engine():
         })
         save_queue(queue)
 
-        # 🧠 SAVE HISTORY (ANTI-REPEAT)
+        # 🧠 Memory
         state["history"].append(prompt[:80])
 
-        # 🔢 INCREMENT COUNT
+        # 🔢 Count
         state["total_videos"] += 1
 
-        # 💾 SAVE STATE (CRASH PROOF)
+        # 💾 Save
         save_state(state)
 
-        print(f"✅ Video {state['total_videos']} completed\n")
+        print(f"✅ Video {state['total_videos']} completed")
 
-        # ⏳ WAIT
-        time.sleep(2)
+        # ⚡ DYNAMIC SPEED CONTROL
+        delay = state.get("delay", 2)
+        print(f"⏳ Waiting {delay}s before next video...\n")
+        time.sleep(delay)
