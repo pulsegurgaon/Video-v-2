@@ -1,201 +1,184 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AI Engine Control</title>
+  <title>AI Video Engine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
       font-family: Arial;
-      background: linear-gradient(135deg,#0f0f0f,#1c1c2e);
+      background: #0f172a;
       color: white;
-      text-align: center;
       padding: 20px;
     }
 
-    h1 { color: cyan; }
+    h1 {
+      text-align: center;
+    }
 
-    button {
-      padding: 10px 15px;
-      margin: 5px;
+    .card {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
       border-radius: 8px;
       border: none;
+    }
+
+    button {
+      background: #22c55e;
+      color: white;
+      font-weight: bold;
       cursor: pointer;
     }
 
-    .start { background: #00ff9d; }
-    .stop { background: #ff4d4d; }
-    .gpu { background: orange; }
-    .colab { background: purple; }
-    .add { background: #00c3ff; }
-
-    .pillar {
-      background: #222;
-      padding: 10px;
-      margin: 10px;
-      border-radius: 12px;
-      display: inline-block;
-    }
-
-    pre {
-      background: black;
-      padding: 10px;
-      border-radius: 10px;
-      text-align: left;
-      max-width: 600px;
-      margin: auto;
-    }
-
-    input, select {
-      padding: 8px;
-      border-radius: 6px;
-      border: none;
+    .danger {
+      background: #ef4444;
     }
   </style>
 </head>
 
 <body>
 
-<h1>🚀 AI Engine Control</h1>
+<h1>🚀 AI Video Control Panel</h1>
 
-<!-- ENGINE -->
-<button class="start" onclick="start()">Start 🚀</button>
-<button class="stop" onclick="stop()">Stop ⛔</button>
+<!-- 🧠 LLM MODE -->
+<div class="card">
+  <h3>🧠 AI Brain</h3>
 
-<br><br>
+  <select id="llmMode">
+    <option value="groq">⚡ Groq (Fast)</option>
+    <option value="ollama">🖥️ Ollama (Local)</option>
+  </select>
 
-<!-- MODE -->
-<button class="gpu" onclick="setMode('ovh')">GPU ⚡</button>
-<button class="colab" onclick="setMode('colab')">Colab ☁️</button>
+  <button onclick="saveLLM()">💾 Save Brain Mode</button>
+</div>
 
-<br><br>
+<!-- 🎬 COLAB URL -->
+<div class="card">
+  <h3>🌐 Video Server (Colab)</h3>
 
-<!-- DELAY CONTROL -->
-<h3>⚡ Speed Control</h3>
-<input type="range" min="1" max="20" value="2" id="delaySlider" oninput="updateDelay()">
-<p>Delay: <span id="delayValue">2</span> sec</p>
+  <input id="colabUrl" placeholder="Paste Colab /generate URL here" />
 
-<br>
+  <button onclick="saveColabUrl()">💾 Save URL</button>
+  <button onclick="testColab()">🧪 Test Connection</button>
 
-<!-- ADD PILLAR -->
-<input id="pillarInput" placeholder="New pillar">
-<button class="add" onclick="addPillar()">Add ➕</button>
+  <p id="colabStatus"></p>
+</div>
 
-<h3>🎯 Pillars</h3>
-<div id="pillars"></div>
+<!-- 🎯 PILLARS -->
+<div class="card">
+  <h3>🎯 Pillars</h3>
 
-<br>
+  <input id="pillarInput" placeholder="Enter new pillar" />
+  <button onclick="addPillar()">➕ Add Pillar</button>
 
-<button onclick="getStatus()">Status</button>
-<button onclick="getQueue()">Queue</button>
+  <ul id="pillarList"></ul>
+</div>
 
-<pre id="output"></pre>
+<!-- 🚀 ENGINE -->
+<div class="card">
+  <h3>🚀 Engine Control</h3>
+
+  <button onclick="startEngine()">▶ Start</button>
+  <button class="danger" onclick="stopEngine()">⛔ Stop</button>
+</div>
 
 <script>
-const API = "https://a61fb53f-5ac1-4938-a34e-6baf85521efc-00-2jblmnx3qfkc7.sisko.replit.dev";
 
-let pillars = JSON.parse(localStorage.getItem("pillars")) || [
-  "dog","satisfying","survival","restoration","whatif","house"
-];
+// ----------------------
+// LOAD SAVED DATA
+// ----------------------
+window.onload = () => {
+  document.getElementById("colabUrl").value = localStorage.getItem("COLAB_API") || "";
+  loadPillars();
+};
 
-render();
-
-// ENGINE
-async function start(){
-  let r = await fetch(API+"/start",{method:"POST"});
-  show(await r.json());
+// ----------------------
+// SAVE LLM MODE
+// ----------------------
+function saveLLM() {
+  const mode = document.getElementById("llmMode").value;
+  localStorage.setItem("LLM_MODE", mode);
+  alert("Saved: " + mode);
 }
 
-async function stop(){
-  let r = await fetch(API+"/stop",{method:"POST"});
-  show(await r.json());
+// ----------------------
+// COLAB URL
+// ----------------------
+function saveColabUrl() {
+  const url = document.getElementById("colabUrl").value;
+  localStorage.setItem("COLAB_API", url);
+  document.getElementById("colabStatus").innerText = "✅ Saved!";
 }
 
-// MODE
-async function setMode(mode){
-  let r = await fetch(API+"/mode/"+mode,{method:"POST"});
-  show(await r.json());
+async function testColab() {
+  const url = localStorage.getItem("COLAB_API");
+
+  if (!url) {
+    alert("Enter URL first");
+    return;
+  }
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    document.getElementById("colabStatus").innerText = "✅ Connected";
+  } catch {
+    document.getElementById("colabStatus").innerText = "❌ Failed";
+  }
 }
 
-// DELAY CONTROL
-async function updateDelay(){
-  let val = document.getElementById("delaySlider").value;
-  document.getElementById("delayValue").innerText = val;
+// ----------------------
+// PILLARS
+// ----------------------
+function loadPillars() {
+  const list = JSON.parse(localStorage.getItem("PILLARS") || "[]");
+  const ul = document.getElementById("pillarList");
+  ul.innerHTML = "";
 
-  await fetch(API+"/set-delay/"+val,{method:"POST"});
-}
-
-// ADD
-function addPillar(){
-  let name = document.getElementById("pillarInput").value;
-  if(!name) return;
-
-  pillars.push(name);
-  save();
-  render();
-}
-
-// EDIT + REMOVE UI
-function render(){
-  let container = document.getElementById("pillars");
-  container.innerHTML = "";
-
-  pillars.forEach((p,i)=>{
-    let div = document.createElement("div");
-    div.className="pillar";
-
-    div.innerHTML = `
-      <input value="${p}" onchange="edit(${i}, this.value)">
-      <br>
-      <button onclick="run('${p}')">Run ▶️</button>
-      <button onclick="remove(${i})">❌</button>
-    `;
-
-    container.appendChild(div);
+  list.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `${p} <button onclick="removePillar(${i})">❌</button>`;
+    ul.appendChild(li);
   });
 }
 
-function edit(i,val){
-  pillars[i]=val;
-  save();
+function addPillar() {
+  const input = document.getElementById("pillarInput");
+  let list = JSON.parse(localStorage.getItem("PILLARS") || "[]");
+
+  list.push(input.value);
+  localStorage.setItem("PILLARS", JSON.stringify(list));
+
+  input.value = "";
+  loadPillars();
 }
 
-function remove(i){
-  pillars.splice(i,1);
-  save();
-  render();
+function removePillar(i) {
+  let list = JSON.parse(localStorage.getItem("PILLARS") || "[]");
+  list.splice(i, 1);
+  localStorage.setItem("PILLARS", JSON.stringify(list));
+  loadPillars();
 }
 
-function save(){
-  localStorage.setItem("pillars", JSON.stringify(pillars));
+// ----------------------
+// ENGINE (placeholder for now)
+// ----------------------
+function startEngine() {
+  alert("Engine start will connect after backend is ready 🚀");
 }
 
-// RUN
-async function run(type){
-  let r = await fetch(API+"/add",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({type})
-  });
-  show(await r.json());
+function stopEngine() {
+  alert("Engine stopped 🛑");
 }
 
-// STATUS
-async function getStatus(){
-  let r = await fetch(API+"/status");
-  show(await r.json());
-}
-
-// QUEUE
-async function getQueue(){
-  let r = await fetch(API+"/queue");
-  show(await r.json());
-}
-
-// OUTPUT
-function show(data){
-  document.getElementById("output").innerText =
-    JSON.stringify(data,null,2);
-}
 </script>
 
 </body>
