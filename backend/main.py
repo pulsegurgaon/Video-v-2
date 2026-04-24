@@ -54,7 +54,7 @@ def start():
     s["engine_running"] = True
     save(STATE, s)
 
-    subprocess.Popen(["python3", os.path.join(BASE, "automation.py")])
+    subprocess.Popen(["python3", os.path.join(BASE, "backend/automation.py")])
 
     return {"status": "started"}
 
