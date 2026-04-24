@@ -1,55 +1,38 @@
 import requests
-from storage_manager import load_state
+import time
 
-# 🔗 PUT YOUR COLAB NGROK LINK HERE
-COLAB_API = "https://galore-wildland-faster.ngrok-free.dev/generate"
+# 🔗 UPDATE THIS EVERY TIME COLAB RESTARTS
+BASE_URL = "https://galore-wildland-faster.ngrok-free.dev"
+GENERATE_API = BASE_URL + "/generate"
 
 
 def generate_video(prompt, output_file):
+    try:
+        print("☁️ Sending prompt to AI Video Server...")
+        
+        res = requests.post(
+            GENERATE_API,
+            json={"prompt": prompt},
+            timeout=600
+        )
 
-    state = load_state()
-    mode = state.get("gpu_mode", "colab")
+        data = res.json()
 
-    print(f"⚙️ Mode: {mode}")
+        if data.get("status") != "done":
+            raise Exception("Generation failed")
 
-    # ☁️ COLAB MODE (PRIMARY WORKING SYSTEM)
-    if mode == "colab":
+        video_url = BASE_URL + data["video_url"]
 
-        print("☁️ Sending prompt to Colab...")
+        print("⬇️ Downloading video...")
+        
+        video_data = requests.get(video_url).content
 
-        try:
-            res = requests.post(COLAB_API, json={
-                "prompt": prompt
-            }, timeout=300)
+        with open(output_file, "wb") as f:
+            f.write(video_data)
 
-            if res.status_code != 200:
-                raise Exception(f"Bad response: {res.text}")
+        print(f"✅ Saved: {output_file}")
+        return output_file
 
-            data = res.json()
-            video_url = data.get("video_url")
-
-            if not video_url:
-                raise Exception("No video_url returned")
-
-            print("⬇️ Downloading video...")
-
-            video_data = requests.get(video_url).content
-
-            with open(output_file, "wb") as f:
-                f.write(video_data)
-
-            print(f"✅ Video saved: {output_file}")
-
-            return output_file
-
-        except Exception as e:
-            print("❌ Colab error:", e)
-            return None
-
-    # ⚡ OVH MODE (placeholder until you install real model)
-    elif mode == "ovh":
-        print("⚠️ OVH mode selected but no model connected yet")
-        raise Exception("No local video model installed")
-
-    else:
-        raise Exception("Invalid mode")
+    except Exception as e:
+        print("❌ Error:", e)
+        return None
