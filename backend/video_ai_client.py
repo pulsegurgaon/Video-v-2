@@ -1,31 +1,55 @@
-import json
+import requests
+from storage_manager import load_state
 
-STATE = "state.json"
-
-def get_mode():
-    return json.load(open(STATE))["gpu_mode"]
-
-def generate_video(prompt):
-    mode = get_mode()
-
-    if mode == "ovh":
-        return generate_local(prompt)
-
-    elif mode == "colab":
-        return trigger_colab(prompt)
+# 🔗 PUT YOUR COLAB NGROK LINK HERE
+COLAB_API = "https://your-ngrok-url.ngrok-free.app/generate"
 
 
-def generate_local(prompt):
-    print("🔥 Running on OVH GPU")
-    # TODO: connect your actual video AI here
-    return "video_generated_locally.mp4"
+def generate_video(prompt, output_file):
 
+    state = load_state()
+    mode = state.get("gpu_mode", "colab")
 
-def trigger_colab(prompt):
-    print("☁️ Sending job to Colab")
+    print(f"⚙️ Mode: {mode}")
 
-    # TODO:
-    # - send prompt to Colab notebook (API / webhook / shared file)
-    # - wait or return link
+    # ☁️ COLAB MODE (PRIMARY WORKING SYSTEM)
+    if mode == "colab":
 
-    return "colab_video_link.mp4"
+        print("☁️ Sending prompt to Colab...")
+
+        try:
+            res = requests.post(COLAB_API, json={
+                "prompt": prompt
+            }, timeout=300)
+
+            if res.status_code != 200:
+                raise Exception(f"Bad response: {res.text}")
+
+            data = res.json()
+            video_url = data.get("video_url")
+
+            if not video_url:
+                raise Exception("No video_url returned")
+
+            print("⬇️ Downloading video...")
+
+            video_data = requests.get(video_url).content
+
+            with open(output_file, "wb") as f:
+                f.write(video_data)
+
+            print(f"✅ Video saved: {output_file}")
+
+            return output_file
+
+        except Exception as e:
+            print("❌ Colab error:", e)
+            return None
+
+    # ⚡ OVH MODE (placeholder until you install real model)
+    elif mode == "ovh":
+        print("⚠️ OVH mode selected but no model connected yet")
+        raise Exception("No local video model installed")
+
+    else:
+        raise Exception("Invalid mode")
