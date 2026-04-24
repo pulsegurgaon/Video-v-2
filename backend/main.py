@@ -1,5 +1,8 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+
 import os, json, threading, time
 from datetime import datetime
 
@@ -8,9 +11,27 @@ from video_ai_client import generate_video
 
 app = FastAPI()
 
+# -----------------------
+# PATH SETUP
+# -----------------------
 BASE = os.path.dirname(__file__)
+FRONTEND_DIR = os.path.join(BASE, "..", "frontend")
+
 STATE_FILE = os.path.join(BASE, "state.json")
 QUEUE_FILE = os.path.join(BASE, "queue.json")
+
+# -----------------------
+# SERVE FRONTEND 🎮
+# -----------------------
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+@app.get("/")
+def serve_ui():
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"status": "AI Engine Running 🚀 (no frontend found)"}
 
 # -----------------------
 # FILE HANDLING
@@ -46,12 +67,12 @@ if not os.path.exists(QUEUE_FILE):
 # REQUEST MODEL
 # -----------------------
 class Config(BaseModel):
-    colab_url: str = None
-    llm_mode: str = None
-    pillars: list[str] = None
+    colab_url: str | None = None
+    llm_mode: str | None = None
+    pillars: list[str] | None = None
 
 # -----------------------
-# CORE ENGINE LOOP
+# CORE ENGINE LOOP 🔥
 # -----------------------
 def engine_loop():
 
@@ -66,12 +87,13 @@ def engine_loop():
 
         pillars = state["pillars"]
 
-        # 🔁 rotation logic
+        # rotation logic
         index = state["total_videos"] % len(pillars)
         pillar = pillars[index]
 
         print(f"\n🧠 Pillar: {pillar}")
 
+        # ---------------- PROMPT ----------------
         try:
             prompt = build_prompt(pillar, state["history"])
             print("🎯 Prompt:", prompt[:100])
@@ -81,6 +103,7 @@ def engine_loop():
             time.sleep(3)
             continue
 
+        # ---------------- VIDEO ----------------
         try:
             res = generate_video(prompt, state.get("colab_url"))
 
@@ -89,7 +112,7 @@ def engine_loop():
             time.sleep(3)
             continue
 
-        # 📦 save queue
+        # ---------------- QUEUE ----------------
         queue = load(QUEUE_FILE, [])
         queue.append({
             "id": state["total_videos"] + 1,
@@ -99,7 +122,7 @@ def engine_loop():
         })
         save(QUEUE_FILE, queue)
 
-        # 🧠 update state
+        # ---------------- STATE UPDATE ----------------
         state["history"].append(prompt[:80])
         state["total_videos"] += 1
         state["last_run"] = str(datetime.now())
@@ -110,19 +133,14 @@ def engine_loop():
 
         time.sleep(5)
 
-
 # -----------------------
 # START ENGINE THREAD
 # -----------------------
 threading.Thread(target=engine_loop, daemon=True).start()
 
 # -----------------------
-# ROUTES
+# ROUTES 🎮
 # -----------------------
-
-@app.get("/")
-def home():
-    return {"status": "AI Engine Running 🚀"}
 
 @app.get("/status")
 def status():
@@ -150,13 +168,13 @@ def queue():
 def update_config(cfg: Config):
     state = load(STATE_FILE, {})
 
-    if cfg.colab_url:
+    if cfg.colab_url is not None:
         state["colab_url"] = cfg.colab_url
 
-    if cfg.llm_mode:
+    if cfg.llm_mode is not None:
         state["llm_mode"] = cfg.llm_mode
 
-    if cfg.pillars:
+    if cfg.pillars is not None:
         state["pillars"] = cfg.pillars
 
     save(STATE_FILE, state)
