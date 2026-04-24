@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Engine</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: linear-gradient(135deg,#0f0f0f,#1c1c2e);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 { color: cyan; }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .start { background: #00ff9d; }
+    .stop { background: #ff4d4d; }
+    .gpu { background: orange; }
+    .colab { background: purple; }
+    .add { background: #00c3ff; }
+
+    .pillar {
+      background: #222;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
+    input {
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      margin: 5px;
+    }
+
+    pre {
+      background: black;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: left;
+      max-width: 600px;
+      margin: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🚀 AI Engine Control</h1>
+
+<!-- ENGINE -->
+<button class="start" onclick="start()">Start 🚀</button>
+<button class="stop" onclick="stop()">Stop ⛔</button>
+
+<br><br>
+
+<!-- MODE -->
+<button class="gpu" onclick="setMode('ovh')">GPU ⚡</button>
+<button class="colab" onclick="setMode('colab')">Colab ☁️</button>
+
+<br><br>
+
+<!-- ADD / EDIT -->
+<input id="pillarInput" placeholder="Enter pillar name">
+<button class="add" onclick="addPillar()" id="addBtn">Add Pillar ➕</button>
+
+<h3>🎯 Your Pillars</h3>
+<div id="pillars"></div>
+
+<br>
+
+<button onclick="getStatus()">Status 📊</button>
+<button onclick="getQueue()">Queue 📜</button>
+
+<pre id="output">System ready...</pre>
+
+<script>
+const API = "https://a61fb53f-5ac1-4938-a34e-6baf85521efc-00-2jblmnx3qfkc7.sisko.replit.dev";
+
+// DEFAULT PILLARS (you can change instantly)
+let defaultPillars = [
+  "emotional story",
+  "oddly satisfying",
+  "survival challenge",
+  "restoration",
+  "what if experiment",
+  "house transformation"
+];
+
+let pillars = JSON.parse(localStorage.getItem("pillars")) || defaultPillars;
+let editingIndex = null;
+
+// ENGINE
+async function start(){
+  let r = await fetch(API+"/start",{method:"POST"});
+  show(await r.json());
+}
+
+async function stop(){
+  let r = await fetch(API+"/stop",{method:"POST"});
+  show(await r.json());
+}
+
+// MODE
+async function setMode(mode){
+  let r = await fetch(API+"/mode/"+mode,{method:"POST"});
+  show(await r.json());
+}
+
+// ADD / UPDATE
+function addPillar(){
+  let name = document.getElementById("pillarInput").value.trim();
+  if(!name) return;
+
+  if(editingIndex !== null){
+    pillars[editingIndex] = name;
+    editingIndex = null;
+    document.getElementById("addBtn").innerText = "Add Pillar ➕";
+  } else {
+    pillars.push(name);
+  }
+
+  document.getElementById("pillarInput").value = "";
+  save();
+  render();
+}
+
+// SAVE
+function save(){
+  localStorage.setItem("pillars", JSON.stringify(pillars));
+}
+
+// RENDER
+function render(){
+  let container = document.getElementById("pillars");
+  container.innerHTML = "";
+
+  pillars.forEach((p, i) => {
+    let div = document.createElement("div");
+    div.className = "pillar";
+
+    div.innerHTML = `
+      <b>${p}</b><br>
+      <button onclick="run('${p}')">▶️ Run</button>
+      <button onclick="edit(${i})">✏️ Edit</button>
+      <button onclick="removePillar(${i})">❌ Remove</button>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+// EDIT
+function edit(index){
+  document.getElementById("pillarInput").value = pillars[index];
+  editingIndex = index;
+  document.getElementById("addBtn").innerText = "Update Pillar ✏️";
+}
+
+// REMOVE
+function removePillar(index){
+  pillars.splice(index,1);
+  save();
+  render();
+}
+
+// RUN JOB
+async function run(type){
+  let r = await fetch(API+"/add",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({type})
+  });
+  show(await r.json());
+}
+
+// STATUS
+async function getStatus(){
+  let r = await fetch(API+"/status");
+  show(await r.json());
+}
+
+// QUEUE
+async function getQueue(){
+  let r = await fetch(API+"/queue");
+  show(await r.json());
+}
+
+// OUTPUT
+function show(data){
+  document.getElementById("output").innerText =
+    JSON.stringify(data,null,2);
+}
+
+// INIT
+render();
+</script>
+
+</body>
+</html>
