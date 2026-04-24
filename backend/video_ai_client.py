@@ -1,38 +1,33 @@
 import requests
-import time
 
-# 🔗 UPDATE THIS EVERY TIME COLAB RESTARTS
-BASE_URL = "https://galore-wildland-faster.ngrok-free.dev"
-GENERATE_API = BASE_URL + "/generate"
+# fallback (in case frontend not used)
+DEFAULT_COLAB_API = "https://galore-wildland-faster.ngrok-free.dev/generate"
 
 
-def generate_video(prompt, output_file):
+def generate_video(prompt, colab_url=None):
+    """
+    Sends prompt to AI video server (Colab)
+    """
+
+    url = colab_url if colab_url else DEFAULT_COLAB_API
+
     try:
-        print("☁️ Sending prompt to AI Video Server...")
-        
+        print(f"🎬 Sending to: {url}")
+
         res = requests.post(
-            GENERATE_API,
+            url,
             json={"prompt": prompt},
-            timeout=600
+            timeout=300
         )
 
         data = res.json()
 
-        if data.get("status") != "done":
-            raise Exception("Generation failed")
-
-        video_url = BASE_URL + data["video_url"]
-
-        print("⬇️ Downloading video...")
-        
-        video_data = requests.get(video_url).content
-
-        with open(output_file, "wb") as f:
-            f.write(video_data)
-
-        print(f"✅ Saved: {output_file}")
-        return output_file
+        print("✅ Video generated")
+        return data
 
     except Exception as e:
-        print("❌ Error:", e)
-        return None
+        print("❌ Video API error:", e)
+        return {
+            "status": "error",
+            "message": str(e)
+        }
