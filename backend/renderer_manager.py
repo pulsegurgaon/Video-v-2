@@ -1,4 +1,9 @@
+from video_ai_client import generate_video
+
 def render_video(prompt, output):
-    print("\n🎬 FINAL PROMPT:\n")
-    print(prompt)
-    print(f"\n⚙️ Rendering {output}...\n")
+
+    print("🎬 Generating real video...")
+
+    video_file = generate_video(prompt)
+
+    print(f"✅ Video ready: {video_file}")
