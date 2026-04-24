@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AI Engine</title>
+  <title>AI Engine Control</title>
 
   <style>
     body {
@@ -36,13 +36,6 @@
       display: inline-block;
     }
 
-    input {
-      padding: 8px;
-      border-radius: 6px;
-      border: none;
-      margin: 5px;
-    }
-
     pre {
       background: black;
       padding: 10px;
@@ -50,6 +43,12 @@
       text-align: left;
       max-width: 600px;
       margin: auto;
+    }
+
+    input, select {
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
     }
   </style>
 </head>
@@ -70,35 +69,35 @@
 
 <br><br>
 
-<!-- ADD / EDIT -->
-<input id="pillarInput" placeholder="Enter pillar name">
-<button class="add" onclick="addPillar()" id="addBtn">Add Pillar ➕</button>
+<!-- DELAY CONTROL -->
+<h3>⚡ Speed Control</h3>
+<input type="range" min="1" max="20" value="2" id="delaySlider" oninput="updateDelay()">
+<p>Delay: <span id="delayValue">2</span> sec</p>
 
-<h3>🎯 Your Pillars</h3>
+<br>
+
+<!-- ADD PILLAR -->
+<input id="pillarInput" placeholder="New pillar">
+<button class="add" onclick="addPillar()">Add ➕</button>
+
+<h3>🎯 Pillars</h3>
 <div id="pillars"></div>
 
 <br>
 
-<button onclick="getStatus()">Status 📊</button>
-<button onclick="getQueue()">Queue 📜</button>
+<button onclick="getStatus()">Status</button>
+<button onclick="getQueue()">Queue</button>
 
-<pre id="output">System ready...</pre>
+<pre id="output"></pre>
 
 <script>
 const API = "https://a61fb53f-5ac1-4938-a34e-6baf85521efc-00-2jblmnx3qfkc7.sisko.replit.dev";
 
-// DEFAULT PILLARS (you can change instantly)
-let defaultPillars = [
-  "emotional story",
-  "oddly satisfying",
-  "survival challenge",
-  "restoration",
-  "what if experiment",
-  "house transformation"
+let pillars = JSON.parse(localStorage.getItem("pillars")) || [
+  "dog","satisfying","survival","restoration","whatif","house"
 ];
 
-let pillars = JSON.parse(localStorage.getItem("pillars")) || defaultPillars;
-let editingIndex = null;
+render();
 
 // ENGINE
 async function start(){
@@ -117,64 +116,60 @@ async function setMode(mode){
   show(await r.json());
 }
 
-// ADD / UPDATE
+// DELAY CONTROL
+async function updateDelay(){
+  let val = document.getElementById("delaySlider").value;
+  document.getElementById("delayValue").innerText = val;
+
+  await fetch(API+"/set-delay/"+val,{method:"POST"});
+}
+
+// ADD
 function addPillar(){
-  let name = document.getElementById("pillarInput").value.trim();
+  let name = document.getElementById("pillarInput").value;
   if(!name) return;
 
-  if(editingIndex !== null){
-    pillars[editingIndex] = name;
-    editingIndex = null;
-    document.getElementById("addBtn").innerText = "Add Pillar ➕";
-  } else {
-    pillars.push(name);
-  }
-
-  document.getElementById("pillarInput").value = "";
+  pillars.push(name);
   save();
   render();
 }
 
-// SAVE
-function save(){
-  localStorage.setItem("pillars", JSON.stringify(pillars));
-}
-
-// RENDER
+// EDIT + REMOVE UI
 function render(){
   let container = document.getElementById("pillars");
   container.innerHTML = "";
 
-  pillars.forEach((p, i) => {
+  pillars.forEach((p,i)=>{
     let div = document.createElement("div");
-    div.className = "pillar";
+    div.className="pillar";
 
     div.innerHTML = `
-      <b>${p}</b><br>
-      <button onclick="run('${p}')">▶️ Run</button>
-      <button onclick="edit(${i})">✏️ Edit</button>
-      <button onclick="removePillar(${i})">❌ Remove</button>
+      <input value="${p}" onchange="edit(${i}, this.value)">
+      <br>
+      <button onclick="run('${p}')">Run ▶️</button>
+      <button onclick="remove(${i})">❌</button>
     `;
 
     container.appendChild(div);
   });
 }
 
-// EDIT
-function edit(index){
-  document.getElementById("pillarInput").value = pillars[index];
-  editingIndex = index;
-  document.getElementById("addBtn").innerText = "Update Pillar ✏️";
+function edit(i,val){
+  pillars[i]=val;
+  save();
 }
 
-// REMOVE
-function removePillar(index){
-  pillars.splice(index,1);
+function remove(i){
+  pillars.splice(i,1);
   save();
   render();
 }
 
-// RUN JOB
+function save(){
+  localStorage.setItem("pillars", JSON.stringify(pillars));
+}
+
+// RUN
 async function run(type){
   let r = await fetch(API+"/add",{
     method:"POST",
@@ -201,9 +196,6 @@ function show(data){
   document.getElementById("output").innerText =
     JSON.stringify(data,null,2);
 }
-
-// INIT
-render();
 </script>
 
 </body>
