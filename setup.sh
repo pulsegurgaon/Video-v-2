@@ -1,24 +1,20 @@
 #!/bin/bash
 
-echo "🚀 Setting up AI Shorts Engine..."
+echo "🚀 Starting AI Engine Setup..."
 
+# Update system
 apt update && apt upgrade -y
-apt install -y python3 python3-pip git curl
 
-# Install Ollama
+# Install python + pip
+apt install python3 python3-pip git -y
+
+# Install dependencies
+pip3 install -r backend/requirements.txt
+
+# Create outputs folder
+mkdir -p backend/outputs
+
+# Install Ollama (if needed)
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Start Ollama
-ollama serve &
-
-sleep 5
-
-# Pull model
-ollama pull llama3
-
-# Install backend
-cd backend
-pip install -r requirements.txt
-
-echo "🔥 Starting backend..."
-python3 main.py
+echo "✅ Setup complete!"
