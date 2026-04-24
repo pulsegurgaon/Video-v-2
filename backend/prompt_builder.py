@@ -1,12 +1,11 @@
 from groq_client import ask_groq
-from ollama_client import ask_ollama
 from storage_manager import load_state
 
 def build_prompt(pillar, history):
 
-    # 🧠 Load system state (to know which AI to use)
+    # 🧠 Load system state (kept for future use)
     state = load_state()
-    mode = state.get("llm_mode", "groq")  # default = groq
+    mode = state.get("llm_mode", "groq")  # still here but unused for now
 
     # 🎯 Your pillar-based idea bank
     idea_bank = {
@@ -78,10 +77,6 @@ Avoid repeating:
 Create a NEW unique idea and expand it into a cinematic AI video prompt.
 """
 
-    # 🔀 AI SWITCH (THIS IS THE MAGIC)
-    if mode == "ollama":
-        print("🖥️ Using OLLAMA")
-        return ask_ollama(system, user)
-    else:
-        print("⚡ Using GROQ")
-        return ask_groq(system, user)
+    # ⚡ ONLY GROQ (Render-safe)
+    print("⚡ Using GROQ")
+    return ask_groq(system, user)
