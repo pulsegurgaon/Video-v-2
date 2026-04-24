@@ -2,7 +2,7 @@ import requests
 from storage_manager import load_state
 
 # 🔗 PUT YOUR COLAB NGROK LINK HERE
-COLAB_API = "https://your-ngrok-url.ngrok-free.app/generate"
+COLAB_API = "https://galore-wildland-faster.ngrok-free.dev/generate"
 
 
 def generate_video(prompt, output_file):
