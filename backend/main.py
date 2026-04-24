@@ -169,3 +169,9 @@ def set_delay(seconds: int):
     s["delay"] = seconds
     save(s)
     return {"delay": seconds}
+@app.post("/set-llm/{mode}")
+def set_llm(mode: str):
+    s = load()
+    s["llm_mode"] = mode  # "groq" or "ollama"
+    save(s)
+    return {"llm_mode": mode}
